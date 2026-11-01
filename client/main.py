@@ -21,9 +21,17 @@ if connection is not None:
         if message == "/종료":
             break
 
+        # 아무 내용 없이 Enter만 누른 경우에는 보내지 않습니다.
         if message != "":
+            # 예: "민수" + ": " + "안녕!"을 붙이면 "민수: 안녕!"이 됩니다.
             text = nickname + ": " + message
-            if not send_message(connection, text):
+
+            # 서버에 메시지를 보내고 전송 결과를 변수에 저장합니다.
+            # 성공하면 True, 실패하면 False가 돌아옵니다.
+            send_result = send_message(connection, text)
+
+            # 전송에 실패하면 while 반복문을 끝냅니다.
+            if send_result == False:
                 break
 
     disconnect(connection)

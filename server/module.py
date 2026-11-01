@@ -80,8 +80,8 @@ def relay_messages(room):
         _close_clients(clients)
 
 
-def close_server(server):
-    """새 접속을 받는 문을 닫습니다. 이미 연결된 대화는 계속됩니다."""
+def close_server_waiting(server):
+    """새로운 접속 대기만 끝냅니다. 이미 연결된 두 사람은 계속 대화합니다."""
     server.close()
 
 

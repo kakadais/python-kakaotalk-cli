@@ -81,22 +81,45 @@ kakaotalk-cli/
 6. `start_chat()`으로 입력과 수신을 준비하고 `while True`로 반복합니다.
 7. `read_message()`로 입력을 받고, `/종료`이면 `break`로 반복을 끝냅니다.
 8. 빈 메시지가 아니면 `+`로 닉네임과 내용을 이어 붙입니다.
-9. `send_message()`로 전송합니다. 실패하면 `False`가 돌아와 반복을 끝냅니다.
+9. `send_message()`로 전송하고, 전송 결과를 `send_result` 변수에 저장합니다.
+   성공하면 `True`, 실패하면 `False`가 돌아옵니다.
+   `if send_result == False:`로 전송 실패를 확인하면 `break`로 반복을 끝냅니다.
 10. `disconnect()`로 연결을 닫고 종료를 알립니다.
 
 `if connection is not None:`은 “접속에 성공했으면 다음 코드를 실행한다”는 뜻입니다.
-`if not send_message(...):`는 “전송에 실패했으면 다음 코드를 실행한다”는 뜻입니다.
+`message != ""`는 “입력한 내용이 빈 문자열이 아니다”라는 뜻입니다.
+`text = nickname + ": " + message`는 닉네임과 내용을 붙여서 보낼 문장을 만듭니다.
+예를 들어 닉네임이 `민수`, 내용이 `안녕!`이면 `민수: 안녕!`이 됩니다.
+
+메시지 전송과 전송 결과 확인은 두 단계로 나눴습니다.
+
+```python
+send_result = send_message(connection, text)
+if send_result == False:
+    break
+```
+
+첫 줄은 실제로 메시지를 보내고 결과를 저장합니다.
+그다음 `if`는 저장된 결과가 `False`인지 확인합니다.
+실패한 경우의 `break`는 `while True` 반복문을 끝내며,
+반복문 아래의 `disconnect(connection)`으로 연결을 정리합니다.
 
 서버는 다음 순서로 읽습니다.
 
 1. `start_server()`로 접속받을 준비를 합니다.
 2. `wait_for_clients()`로 두 사람이 들어올 때까지 기다립니다.
-3. `close_server()`로 새 접속을 막습니다. 이미 연결된 두 사람은 대화할 수 있습니다.
+3. `close_server_waiting()`으로 새 접속 대기를 끝냅니다. 이미 연결된 두 사람은 대화할 수 있습니다.
 4. `relay_messages()`로 두 사람의 메시지를 서로에게 전달합니다.
 5. 한 사람이 나가면 연결을 정리하고 끝납니다.
 
 `room`은 두 사람의 연결과 받은 메시지를 묶은 값입니다.
 처음에는 내부 구조를 몰라도 함수에 전달해서 사용할 수 있습니다.
+
+`wait_for_clients()`가 실행되는 동안 다음 줄은 실행되지 않습니다.
+두 사람이 연결되어 함수가 값을 돌려주면 `close_server_waiting()`이 실행됩니다.
+이때 새 접속을 받는 소켓만 닫으므로 이미 접속한 두 사람은 계속 연결되어 있습니다.
+이후 `relay_messages()` 안의 반복문이 대화를 전달하고,
+한 사람이 나가서 이 함수가 끝나면 마지막 종료 안내가 출력됩니다.
 
 ## module.py에 맡긴 부분
 
