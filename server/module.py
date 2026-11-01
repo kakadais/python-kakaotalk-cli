@@ -1,8 +1,15 @@
 """서버의 통신 기능입니다. 처음에는 main.py만 읽어도 됩니다."""
 
+from datetime import datetime
+import json
+from pathlib import Path
 import queue
 import socket
 import threading
+
+
+LOG_PATH = Path(__file__).with_name("log.json")
+LOG_LOCK = threading.Lock()
 
 
 def start_server(host, port):
@@ -90,12 +97,42 @@ def _receive_messages(connection, messages, finished):
     try:
         with connection.makefile("r", encoding="utf-8") as reader:
             for line in reader:
-                messages.put((connection, line.rstrip("\n")))
+                message = line.rstrip("\n")
+                _save_message(message)
+                messages.put((connection, message))
     except (OSError, UnicodeError):
         pass
     finally:
         finished.set()
         messages.put((connection, None))
+
+
+def _save_message(message):
+    """받은 메시지를 시각과 함께 server/log.json에 이어서 기록합니다."""
+    # 두 클라이언트가 동시에 보내도 한 번에 한 메시지씩 파일을 수정합니다.
+    with LOG_LOCK:
+        try:
+            history = []
+            if LOG_PATH.exists():
+                with LOG_PATH.open("r", encoding="utf-8") as file:
+                    history = json.load(file)
+            if not isinstance(history, list):
+                raise ValueError("log.json의 내용은 JSON 배열이어야 합니다.")
+
+            history.append({
+                "time": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "message": message,
+            })
+
+            # 먼저 임시 파일에 쓰고 교체해 기존 기록이 쓰는 도중 손상되지 않게 합니다.
+            temporary_path = LOG_PATH.with_name("log.json.tmp")
+            with temporary_path.open("w", encoding="utf-8") as file:
+                json.dump(history, file, ensure_ascii=False, indent=2)
+                file.write("\n")
+            temporary_path.replace(LOG_PATH)
+        except (OSError, ValueError) as error:
+            # 기록에 실패하더라도 채팅은 계속하고 기존 기록은 유지합니다.
+            print("[오류] log.json에 대화를 기록할 수 없습니다:", error, flush=True)
 
 
 def _send_text(connection, text):
